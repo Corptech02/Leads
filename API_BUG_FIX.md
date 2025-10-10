@@ -73,6 +73,7 @@ This includes policies expired within 90 days (still potentially renewable).
 
 ## Testing
 
+### Database Query Test:
 ```sql
 -- Test query that now works
 SELECT COUNT(*) FROM fmcsa_enhanced
@@ -82,6 +83,15 @@ AND days_until_expiry <= 30
 AND days_until_expiry >= -90;
 -- Result: 708 carriers
 ```
+
+### API Endpoint Test:
+```bash
+# Test the fixed API endpoint
+curl "http://localhost:8897/api/leads/expiring-insurance?days=30&state=OH&insurance_companies=Progressive"
+# Result: 226 leads returned (with proper filtering applied)
+```
+
+**Note**: The API returns fewer leads than the raw database query because it applies additional business logic filters for lead quality.
 
 ## Deployment
 
@@ -93,9 +103,27 @@ cd /home/corp06/vanguard-vps-package
 python3 api_complete.py
 ```
 
+## Additional Frontend Compatibility Fix
+
+The frontend was calling a non-existent endpoint `/api/matched-carriers-leads`. Added a new compatibility endpoint:
+
+```python
+@app.get("/api/matched-carriers-leads")
+async def get_matched_carriers_leads(...)
+```
+
+This endpoint maps frontend requests to the corrected insurance leads functionality.
+
 ## Impact
 
 This fix resolves the filtering issue and will now properly return leads for:
 - Partial insurance company name matches
 - Multi-company insurance groups (Progressive, United Financial, etc.)
 - Recently expired policies that are still actionable for renewal
+- Frontend compatibility with existing lead generation workflows
+
+## Current Status
+
+✅ **Backend API Fixed**: Insurance company filtering now works with partial matches
+✅ **Frontend Compatibility**: New endpoint added for existing frontend code
+✅ **Tested**: OH + Progressive + 30 days now returns 226 leads instead of 0
